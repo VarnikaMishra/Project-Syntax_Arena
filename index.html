@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Syntax Arena</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: white; padding: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        .card { background: #2d2d2d; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        textarea { width: 100%; height: 200px; background: #000; color: #0f0; font-family: monospace; }
+        button { background: #4caf50; color: white; border: none; padding: 10px 20px; cursor: pointer; }
+        input { padding: 8px; margin-bottom: 10px; border-radius: 4px; border: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Syntax Arena</h1>
+        
+        <div class="card">
+            <h3>Player Profile</h3>
+            <input type="text" id="username" placeholder="Enter Username" value="Player1">
+        </div>
+
+        <div id="challenge-box" class="card">
+            <h2 id="title">Loading Challenge...</h2>
+            <p id="desc"></p>
+            <textarea id="code" placeholder="Write your Python code here..."></textarea>
+            <br><br>
+            <button onclick="submitCode()">Submit Solution</button>
+            <p id="result"></p>
+        </div>
+    </div>
+
+    <script>
+        let currentChallengeId = null;
+
+        // Fetch questions from Backend
+        async function loadChallenge() {
+            const resp = await fetch('http://localhost:8000/questions');
+            const data = await resp.json();
+            if (data.length > 0) {
+                currentChallengeId = data[0].id;
+                document.getElementById('title').innerText = data[0].title;
+                document.getElementById('desc').innerText = data[0].description;
+            }
+        }
+
+        async function submitCode() {
+            const btn = document.querySelector('button');
+            const resText = document.getElementById('result');
+            const user = document.getElementById('username').value;
+            const code = document.getElementById('code').value;
+
+            if(!user) return alert("Please enter a username!");
+
+            btn.disabled = true;
+            resText.innerText = "Judging...";
+
+            try {
+                const response = await fetch('http://localhost:8000/judge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: user,
+                        challenge_id: currentChallengeId,
+                        language: "python",
+                        code: code
+                    })
+                });
+
+                const result = await response.json();
+                resText.innerText = result.message;
+                resText.style.color = result.passed ? "#0f0" : "#f00";
+            } catch (err) {
+                resText.innerText = "Error connecting to server.";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        window.onload = loadChallenge;
+    </script>
+</body>
+</html>
